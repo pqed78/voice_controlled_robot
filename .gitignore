@@ -1,0 +1,29 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+gemini.md
+.python-version
+
+# Virtual environments
+.venv/
+
+#folder
+.vscode/
+*.db
+*.db-shm
+*.db-wal
+
+
+# Temporary audio files
+*.wav
+*.mp3
+output.*
+temp.*
+
+# Model files
+*.onnx
+*.json
