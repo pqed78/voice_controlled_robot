@@ -4,9 +4,8 @@ import ollama
 import json
 import os
 
-# 1. STT 모델 설정 (VRAM 절약을 위해 'base' 혹은 'small' 모델 사용)
-# device="cuda"로 설정하면 GPU를 사용하고, "cpu"로 설정하면 CPU를 사용합니다.
-stt_model = WhisperModel("base", device="cuda", compute_type="int8_float16")
+# 1. STT 모델 설정 (최고 사양 turbo 모델 사용)
+stt_model = WhisperModel("large-v3-turbo", device="cuda", compute_type="float16")
 
 def listen_and_parse():
     # 마이크 설정
@@ -54,10 +53,13 @@ def listen_and_parse():
     except Exception as e:
         print(f"❌ 오류 발생: {e}")
 
-if __name__ == "__main__":
+def main():
     # Ollama 모델이 'robot_commander'라는 이름으로 이미 생성되어 있어야 합니다.
     while True:
         listen_and_parse()
         cont = input("\n계속하시겠습니까? (Enter: 계속 / q: 종료): ")
         if cont.lower() == 'q':
             break
+
+if __name__ == "__main__":
+    main()

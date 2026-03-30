@@ -52,8 +52,7 @@ class RobotCommandParser:
         else:
             print("🛑 명령이 취소되었습니다.")
 
-# 테스트 실행
-if __name__ == "__main__":
+def main():
     # 먼저 Ollama 모델이 생성되어 있어야 함:
     # 터미널에서 `ollama create robot_commander -f robot_modelfile` 실행 필요
     
@@ -70,3 +69,6 @@ if __name__ == "__main__":
     test_cmd_2 = "거실로 가서 오른팔로 물병 좀 집어줘."
     result_2 = parser.parse_command(test_cmd_2)
     parser.confirm_and_execute(result_2)
+
+if __name__ == "__main__":
+    main()
