@@ -5,9 +5,16 @@ from nav2_msgs.action import NavigateToPose
 import time
 
 class RobotRosInterface(Node):
-    def __init__(self):
-        super().__init__('robot_voice_bridge')
+    def __init__(self, namespace=''):
+        """네임스페이스를 지원하는 ROS2 인터페이스"""
+        # Node 생성 시 namespace를 지정하면 모든 토픽/액션에 자동으로 접두어가 붙습니다.
+        super().__init__('robot_voice_bridge', namespace=namespace)
+        
+        self.get_logger().info(f"🤖 ROS2 인터페이스 초기화 (Namespace: '{namespace}')")
+        
+        # Action 이름 'navigate_to_pose'는 네임스페이스가 있다면 자동으로 '/ns/navigate_to_pose'가 됩니다.
         self._nav_client = ActionClient(self, NavigateToPose, 'navigate_to_pose')
+        
         self._current_goal_handle = None
         self.location_map = {
             "거실": [1.0, 2.0, 0.0],
@@ -22,7 +29,6 @@ class RobotRosInterface(Node):
         if action == "move_to":
             return self.send_move_goal(command.get("target"))
         elif action in ["pick", "place"]:
-            # 팔 동작 중에도 취소 체크를 위해 1초씩 나눠서 대기 시뮬레이션
             for _ in range(3):
                 if self._current_goal_handle == "CANCELLED": return False
                 time.sleep(1.0)
@@ -31,9 +37,12 @@ class RobotRosInterface(Node):
 
     def send_move_goal(self, target_name):
         if target_name not in self.location_map:
+            self.get_logger().error(f"알 수 없는 장소: {target_name}")
             return False
 
+        # 서버 대기 (네임스페이스가 포함된 경로로 대기함)
         if not self._nav_client.wait_for_server(timeout_sec=5.0):
+            self.get_logger().error(f"Nav2 서버를 찾을 수 없습니다: {self._nav_client._action_name}")
             return False
 
         coords = self.location_map[target_name]
@@ -52,7 +61,6 @@ class RobotRosInterface(Node):
 
         result_future = self._current_goal_handle.get_result_async()
         
-        # 결과가 나올 때까지 기다리면서 중단 요청이 있는지 체크
         while rclpy.ok():
             rclpy.spin_once(self, timeout_sec=0.1)
             if result_future.done():
@@ -64,7 +72,6 @@ class RobotRosInterface(Node):
         return True
 
     def abort_all(self):
-        """외부에서 긴급 중단 명령을 내릴 때 호출"""
         if self._current_goal_handle and self._current_goal_handle != "CANCELLED":
             self.get_logger().warn("🚨 긴급 중단 시퀀스 가동!")
             self._current_goal_handle.cancel_goal_async()

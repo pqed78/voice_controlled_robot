@@ -41,6 +41,7 @@ STT_MODEL_SIZE = "large-v3-turbo"
 LLM_MODEL_NAME = "robot_commander"
 WAKEUP_WORD = "저기요"
 STOP_KEYWORDS = ["멈춰", "정지", "그만", "그만해", "중단", "취소해", "stop"]
+ROS_NAMESPACE = "" # 네임스페이스가 필요한 경우 'robot1' 등 입력
 
 # --- 초기화 ---
 print(f"⚙️ 시스템 초기화 시작...")
@@ -75,7 +76,7 @@ def listen_voice(timeout=5, prompt="👂 듣고 있습니다..."):
                 r.adjust_for_ambient_noise(source, duration=0.3)
                 print(f"\r{prompt}", end="", flush=True)
                 audio = r.listen(source, timeout=timeout, phrase_time_limit=10)
-                print(f"\r{' ' * 50}\r✅ 분석 중...", end="", flush=True)
+                print(f"\r{' ' * 50}\r✅ 소리 감지! 분석 중...", end="", flush=True)
     except:
         return ""
     
@@ -107,7 +108,8 @@ def stop_monitor(ros_interface):
 def main():
     global is_abort_requested
     rclpy.init()
-    ros_interface = RobotRosInterface()
+    # 네임스페이스를 인자로 전달
+    ros_interface = RobotRosInterface(namespace=ROS_NAMESPACE)
     state = "WAITING_WAKEUP"
     pending_commands = []
     
@@ -127,6 +129,7 @@ def main():
 
             voice_text = listen_voice(timeout=7, prompt="🎤 말씀하세요 (7s)...")
             if not voice_text:
+                print("\n⏰ 명령 대기 시간 초과.")
                 state = "WAITING_WAKEUP"
                 continue
             
@@ -151,23 +154,21 @@ def main():
                 if any(word in voice_text for word in ["수행", "응", "그래", "해줘", "어"]):
                     speak("작업을 시작합니다.")
                     
-                    # 🚀 [긴급 중단 감시 스레드 시작]
                     is_abort_requested = True
                     monitor_thread = threading.Thread(target=stop_monitor, args=(ros_interface,))
                     monitor_thread.daemon = True
                     monitor_thread.start()
 
-                    # 순차 작업 실행
                     for cmd in pending_commands:
-                        if not is_abort_requested: break # 감시 스레드에서 정지했을 경우
+                        if not is_abort_requested: break 
                         
                         success = ros_interface.execute_command(cmd)
                         if not success:
                             break
                     
-                    if is_abort_requested: # 정상 종료 시
+                    if is_abort_requested:
                         speak("모든 작업을 완료했습니다.")
-                    else: # 중단 시
+                    else:
                         speak("작업을 긴급 중단했습니다.")
                     
                     is_abort_requested = False
